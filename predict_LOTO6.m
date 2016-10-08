@@ -1,20 +1,20 @@
-function	predict_ROTO_SIX()
+function	predict_LOTO6()
 	
 	%-------------------------------------------
 	%
-	%	predicting ROTO6
+	%	Predicting ROTO6
 	%				using Boltzman Machine
 	%
-	%		author:Shotaro Taniguchi
+	%		Author:Shotaro Taniguchi
 	%
 	%-------------------------------------------
 	
 	%parameter
-	N_smp	=	50;
+	N_smp	=	500;
 	N_lrn	=	100;
 	num		=	43;
-	eta_b	=	0.05;
-	eta_w	=	0.01;
+	eta_b	=	0.0025;
+	eta_w	=	0.0005;
 	
 	%initialize
 	b	=	rand(1,num);
@@ -22,32 +22,36 @@ function	predict_ROTO_SIX()
 	w	=	w	-	diag(diag(w));
 
 	%data load
-	x	=	zeros(100,num);
-	x(:,18)	=	rand(100,1)>0.5;
-	x(:,19)	=	rand(100,1)>0.2;
-	x(:,20)	=	1;
-	x(:,21)	=	rand(100,1)>0.1;
-	x(:,22)	=	rand(100,1)>0.4;
-	x(:,23)	=	rand(100,1)>0.8;
+	if	exist('./loto6.mat')
+		fprintf(1,'LOADING ... \n');
+		load './loto6.mat'
+	else
+		fprintf(1,'MAKING TEST DATA ... \n');
+		loto6_csv		=	csvread('./loto6.csv');
+		loto6_number	=	loto6_csv(2:end,4:9);
+		x	=	[];
+		for	row	=	loto6_number'
+			x_row	=	zeros(1,43);
+			x_row(row)	=	1;
+			x	=	[x;x_row];
+		end
+		testdata	=	x;
+		save('loto6.mat','x','testdata')
+	end
 
 	%learning
 	fprintf(1,'LEARNING ... \n');
+	histdata	=	repmat([1:43],size(x,1),1);
+	histdata	=	reshape(histdata',1,[]);
+	x_hist_test	=	reshape(x',1,[]);
 	for	n	=	1:1:N_lrn
-	x	=	zeros(100,num);
-	x(:,18)	=	rand(100,1)>0.5;
-	x(:,19)	=	rand(100,1)>0.2;
-	x(:,20)	=	1;
-	x(:,21)	=	rand(100,1)>0.1;
-	x(:,22)	=	rand(100,1)>0.4;
-	x(:,23)	=	rand(100,1)>0.8;
 		fprintf(1,'*--iter = %d\n',n);
 		fflush(stdout);
 		%renew parameter (bi)
 		x_smp	=	gibbs_sampling(b,w,N_smp);
-[sum(x_smp).*(size(x,1)./size(x_smp,1));sum(x)]
-norm(sum(x_smp)-sum(x))
 		L_b		=	sum(x)	-	sum(x_smp).*(size(x,1)./size(x_smp,1));
 		b		=	b	+	eta_b.*L_b;
+[sum(x_smp).*(size(x,1)./size(x_smp,1));sum(x)]
 		%renew parameter (wij)
 		for	i	=	1:1:num
 			for	j	=	1:1:num
@@ -57,6 +61,22 @@ norm(sum(x_smp)-sum(x))
 		end
 		w	=	w	-	diag(diag(w));
 		save('./result.mat')
+		%see histgram
+		x_hist	=	reshape(x_smp',1,[]);
+		f	=	figure(1);
+		title('HISTOGRAM')
+			f1	=	subplot(2,1,1);
+			hist(histdata(find(x_hist)),43);
+			xlim([1,43])
+			title(f1,'SAMPLING DATA by BM')
+			xlabel('NUMBER (1-43)')
+			ylabel('FREQUENCY')
+			f2	=	subplot(2,1,2);
+			hist(histdata(find(x_hist_test)),43);
+			xlim([1,43])
+			title(f1,'TEST DATA')
+			xlabel('NUMBER (1-43)')
+			ylabel('FREQUENCY')
 	end
 
 	
@@ -69,7 +89,9 @@ end
 function	x_smp	=	gibbs_sampling(b,w,N)
 
 	%parameter
-	burn	=	5;
+	burn	=	50;
+	wait	=	5;
+	cnt		=	0;
 
 	%initialize
 	x		=	randn(size(b))>1;
@@ -90,11 +112,10 @@ function	x_smp	=	gibbs_sampling(b,w,N)
 			end
 		end
 		%judge
-		if	sum(x)	==	6 || true;
+		if	rem(cnt,wait)==0;
 			x_smp	=	[x_smp;x];
-			fprintf(1,'.');
-			fflush(stdout);
 		end
+		cnt	=	cnt + 1;
 	end
 
 	%burn-in
