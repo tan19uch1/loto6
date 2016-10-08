@@ -51,7 +51,7 @@ function	predict_LOTO6()
 		x_smp	=	gibbs_sampling(b,w,N_smp);
 		L_b		=	sum(x)	-	sum(x_smp).*(size(x,1)./size(x_smp,1));
 		b		=	b	+	eta_b.*L_b;
-[sum(x_smp).*(size(x,1)./size(x_smp,1));sum(x)]
+
 		%renew parameter (wij)
 		for	i	=	1:1:num
 			for	j	=	1:1:num
